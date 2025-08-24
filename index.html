@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM NSA Suite v5.1</title>
+<style>
+    /* Estilos Gerais */
+    :root { --primary-color: #00bfff; --dark-bg: #01040a; --medium-bg: rgba(30, 30, 30, 0.8); --card-bg: rgba(42, 42, 42, 0.7); --border-color: #444; --text-color: #ddd; --success-color: #39ff14; --action-color: #ff4d4d; }
+    body { margin: 0; font-family: 'Roboto Mono', monospace, Arial, sans-serif; background-color: var(--dark-bg); color: var(--text-color); overflow-x: hidden; position: relative; background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzA40SwtiBSk3UHE8JIlsI9M_LKCJj-s5sTA&s'); background-size: cover; background-position: center; background-attachment: fixed; }
+    body::after { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(10, 20, 30, 0.85); z-index: -1; }
+    body::before { content: "TOP SECRET"; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 8vw; font-weight: bold; color: rgba(255, 255, 255, 0.03); pointer-events: none; user-select: none; z-index: 0; }
+    
+    /* Layout */
+    .topbar { height: 120px; background-color: rgba(34, 34, 34, 0.8); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 2px solid var(--primary-color); z-index: 10; position: sticky; top: 0; }
+    .topbar h1 { margin: 0; font-size: 55px; color: var(--primary-color); display: flex; align-items: center; }
+    .topbar img { height: 110px; margin-right: 10px; }
+    .container { display: flex; }
+    .sidebar { width: 220px; background-color: rgba(34, 34, 34, 0.7); backdrop-filter: blur(10px); position: fixed; top: 60px; bottom: 0; padding: 10px; border-right: 2px solid var(--border-color); z-index: 5; }
+    .sidebar h2 { font-size: 14px; color: #aaa; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px; }
+    .sidebar ul { list-style: none; padding: 0; }
+    .sidebar li { margin: 10px 0; transition: color 0.2s, background-color 0.2s; font-size: 14px; padding: 5px; border-radius: 3px; }
+    .sidebar li.sidebar-button { cursor: pointer; }
+    .sidebar li.sidebar-button:hover { color: #111; background-color: var(--primary-color); }
+    
+    /* Abas */
+    .main-content { margin-left: 230px; flex: 1; padding: 20px; }
+    .tab-bar { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+    .tab-button { background: none; border: none; color: #aaa; padding: 10px 20px; font-size: 16px; cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.2s, border-color 0.2s; }
+    .tab-button.active { color: var(--primary-color); border-bottom: 3px solid var(--primary-color); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    
+    /* Componentes */
+    .target-form { display: flex; margin-bottom: 15px; }
+    .target-form input, .xkeyscore-form input { flex: 1; padding: 8px; border-radius: 3px; border: 1px solid var(--border-color); background-color: #333; color: #fff; margin-right: 5px; }
+    .target-form button, .xkeyscore-form button { padding: 8px 15px; border-radius: 3px; border: none; background-color: var(--primary-color); color: #111; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+    .data-panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 15px; }
+    .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 5px; padding: 15px; transition: transform 0.2s, background-color 0.2s; font-size: 13px; }
+    .logs, .xkeyscore-results, .bullrun-log { margin-top: 5px; background-color: var(--medium-bg); border: 2px solid var(--border-color); border-radius: 5px; padding: 10px; height: 250px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 13px; color: var(--success-color); }
+    .skynet-map { width: 100%; height: auto; border-radius: 5px; border: 2px solid var(--border-color); }
+    .log-entry { margin: 0; padding: 2px 0; white-space: pre-wrap; }
+    .log-timestamp { color: #888; }
+    .log-action { color: var(--action-color); font-weight: bold; }
+    .log-success { color: var(--success-color); }
+    .log-info { color: var(--primary-color); }
+    
+    /* --- Estilos do Terminal --- */
+    .terminal-window {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        max-width: 900px;
+        min-width: 300px;
+        min-height: 200px;
+        height: 60vh;
+        background-color: #0d0d0d;
+        border: 2px solid #39ff14;
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(0, 191, 255, 0.4);
+        z-index: 100;
+        display: none; /* Escondido por padrão */
+        flex-direction: column;
+        overflow: hidden;
+        resize: none; /* Desabilita o redimensionamento nativo, pois faremos com JS */
+    }
+    .terminal-header {
+        background-color: #1a1a1a;
+        padding: 8px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #333;
+        cursor: grab;
+    }
+    .terminal-header span {
+        font-size: 12px;
+        color: #aaa;
+    }
+    .terminal-buttons {
+        display: flex;
+        gap: 8px;
+    }
+    .terminal-buttons button {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+    .terminal-buttons button:hover {
+        opacity: 1;
+    }
+    .terminal-buttons .close { background-color: #ff5f56; }
+    .terminal-buttons .minimize { background-color: #ffbd2e; }
+    .terminal-buttons .maximize { background-color: #27c93f; }
+    .terminal-output {
+        flex-grow: 1;
+        padding: 15px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 14px;
+        color: #fff;
+        overflow-y: auto;
+        white-space: pre-wrap;
+    }
+    .terminal-output .prompt { color: #39ff14; }
+    .terminal-output .info { color: #00bfff; }
+    .terminal-output .error { color: #ff4d4d; }
+    .terminal-output .command { color: #aaa; }
+    
+    /* Handle de redimensionamento */
+    .terminal-resize-handle {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 15px;
+        height: 15px;
+        background-color: transparent;
+        cursor: nwse-resize;
+    }
+    
+    /* Estado Maximizado */
+    .terminal-window.maximized {
+        width: 100vw !important;
+        height: 100vh !important;
+        top: 0 !important;
+        left: 0 !important;
+        transform: none !important;
+        border-radius: 0;
+        border: none;
+    }
+    
+    /* Estado Minimizado */
+    .terminal-window.minimized {
+        width: 250px;
+        height: auto;
+        bottom: 0;
+        top: auto;
+        left: 20px;
+        transform: none;
+        border-radius: 8px 8px 0 0;
+    }
+    .terminal-window.minimized .terminal-output {
+        display: none;
+    }
+    
+    /* Botão de abrir terminal */
+    .open-terminal-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        background-color: var(--primary-color);
+        color: var(--dark-bg);
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        z-index: 99;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+    .open-terminal-btn:hover {
+        background-color: #0088cc;
+        transform: scale(1.05);
+    }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <h1>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/d/d2/PRISM_logo_%28PNG%29.png" alt="PRISM Logo">
+        NSA Surveillance Suite v5.1
+        <img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/Seal_of_the_U.S._National_Security_Agency.svg" alt="NSA Logo" style="height: 110px; margin-left: 20px;">
+    </h1>
+</div>
+
+<div class="container">
+    <div class="sidebar">
+        <h2>Data Interception Modules</h2>
+        <ul>
+            <li class="sidebar-button" onclick="requestData('GOOGLE-API-INT')">Google</li>
+            <li class="sidebar-button" onclick="requestData('FACEBOOK-GRAPH')">Facebook</li>
+            <li class="sidebar-button" onclick="requestData('MS-AZURE-GATEWAY')">Microsoft</li>
+            <li class="sidebar-button" onclick="requestData('APPLE-CLOUD-CORE')">Apple</li>
+            <li class="sidebar-button" onclick="requestData('META-MSG-API')">Whatsapp</li>
+            <li class="sidebar-button" onclick="requestData('TLGRM-SEC-SVC')">Telegram</li>
+            <li class="sidebar-button" onclick="requestData('GLOBAL-ISP-TAP')">Major ISPs</li>
+        </ul>
+        <h2 style="margin-top: 20px;">CRYPTO Operations</h2>
+        <ul>
+            <li class="sidebar-button" onclick="runComplexOperation()">Initiate BULLRUN Decryption</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="tab-bar">
+            <button class="tab-button active" onclick="openTab('prism')">PRISM (INTEL)</button>
+            <button class="tab-button" onclick="openTab('xkeyscore')">XKEYSCORE (ANALYSIS)</button>
+            <button class="tab-button" onclick="openTab('bullrun')">BULLRUN (DECRYPT)</button>
+            <button class="tab-button" onclick="openTab('skynet')">SKYNET (GEOINT)</button>
+        </div>
+
+        <div id="prism-tab" class="tab-pane active">
+            <h2>Active Target Monitoring</h2>
+            <div class="target-form">
+                <input type="text" id="targetInput" placeholder="Enter TARGET-ID (e.g., P-12345678, user@domain)...">
+                <button onclick="addTarget()">Acquire Target</button>
+            </div>
+            <div class="data-panel" id="dataPanel"></div>
+            <h2 style="margin-top:20px;">PRISM System Log</h2>
+            <div class="logs" id="prism-logs"></div>
+        </div>
+
+        <div id="xkeyscore-tab" class="tab-pane">
+            <h2>XKEYSCORE - Global Data Mining</h2>
+            <div class="xkeyscore-form">
+                <input type="text" id="xkeyscoreInput" placeholder="Enter search query (e.g., 'encrypted.docs', 'plan-b.pdf', IP address)...">
+                <button onclick="runXkeyscoreSearch()">Run Query</button>
+            </div>
+            <div class="xkeyscore-results" id="xkeyscore-results">Awaiting query...</div>
+        </div>
+
+        <div id="bullrun-tab" class="tab-pane">
+            <h2>BULLRUN - Cryptanalysis Division</h2>
+            <p>Monitoring encrypted data streams. Select a target and initiate decryption protocol.</p>
+            <div class="bullrun-log" id="bullrun-log">No decryption tasks running.</div>
+        </div>
+        
+        <div id="skynet-tab" class="tab-pane">
+            <h2>SKYNET - Geospatial Analysis</h2>
+            <p>Live tracking of global assets and threats.</p>
+            <img src="https://www.vice.com/wp-content/uploads/sites/2/2015/07/oFTHu7E.gif" alt="Global Threat Map" class="skynet-map">
+        </div>
+    </div>
+</div>
+
+<!-- Janela do Terminal -->
+<div id="terminalWindow" class="terminal-window">
+    <div id="terminalHeader" class="terminal-header">
+        <span>NSA Command Shell</span>
+        <div class="terminal-buttons">
+            <button class="minimize" onclick="minimizeTerminal()"></button>
+            <button class="maximize" onclick="maximizeTerminal()"></button>
+            <button class="close" onclick="closeTerminal()"></button>
+        </div>
+    </div>
+    <div id="terminalOutput" class="terminal-output"></div>
+    <div id="terminalResizeHandle" class="terminal-resize-handle"></div>
+</div>
+
+<!-- Botão para abrir o terminal -->
+<button class="open-terminal-btn" onclick="openTerminal()">>/</button>
+
+<script>
+// --- ELEMENTOS DOM E VARIÁVEIS DO SISTEMA ---
+const dataPanel = document.getElementById('dataPanel');
+const prismLogs = document.getElementById('prism-logs');
+const bullrunLog = document.getElementById('bullrun-log');
+const xkeyscoreResults = document.getElementById('xkeyscore-results');
+const terminalWindow = document.getElementById('terminalWindow');
+const terminalHeader = document.getElementById('terminalHeader');
+const terminalResizeHandle = document.getElementById('terminalResizeHandle');
+const terminalOutput = document.getElementById('terminalOutput');
+let targets = [];
+let terminalLoop;
+
+// Variáveis para arrastar e redimensionar
+let isDragging = false;
+let isResizing = false;
+let currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+let initialWidth, initialHeight;
+
+// --- CONTEXTO DE DADOS SIMULADOS ---
+const deviceDatabase = [ 
+    { manufacturer: 'Apple', model: 'iPhone 17 Pro', os: 'iOS 19.0.1', id: 'APL_IOS_2309' }, 
+    { manufacturer: 'Samsung', model: 'Galaxy S26 Ultra', os: 'Android 16', id: 'SMS_AND_7734' }, 
+    { manufacturer: 'Google', model: 'Pixel 10 Pro', os: 'Android 16', id: 'GOO_PIX_4490' } 
+];
+const carriers = ["AT&T", "Verizon", "T-Mobile", "Vodafone", "Telefonica"];
+const networkProtocols = ["TCP/IP", "TLS 1.3", "QUIC", "HTTP/3", "Tor"];
+const systemEvents = ["SYSTEM-INIT", "TARGET-ACQ", "DATA-INJECTION", "STREAM-ANALYSIS", "GEO-LOC-PING", "ENCRYPT-BYPASS"];
+
+// --- FUNÇÕES DE UTILIDADE ---
+function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function generateLogEntry(message, type = 'info', logEl = prismLogs) { 
+    const p = document.createElement('p'); 
+    p.className = 'log-entry'; 
+    p.innerHTML = `<span class="log-timestamp">[${new Date().toISOString()}]</span> <span class="log-${type}">${message}</span>`; 
+    logEl.appendChild(p); 
+    logEl.scrollTop = logEl.scrollHeight; 
+}
+function generateRandomIP() { return Array.from({length: 4}, () => Math.floor(Math.random() * 256)).join('.'); }
+function generateRandomProtocol() { return getRandomItem(networkProtocols); }
+function generateRandomLocation() {
+    const lat = (Math.random() * (40 - -40) + -40).toFixed(5);
+    const lon = (Math.random() * (120 - -120) + -120).toFixed(5);
+    return { lat, lon };
+}
+function generateRandomBytes() { return (Math.random() * 1024).toFixed(2); }
+
+// --- LÓGICA DE GERENCIAMENTO DE ABAS ---
+function openTab(tabName) {
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+// --- LÓGICA DE AQUISIÇÃO DE ALVO PRISM ---
+function addTarget() { 
+    const input = document.getElementById('targetInput'); 
+    const targetName = input.value.trim(); 
+    if (!targetName) {
+        generateLogEntry("ERROR: Invalid TARGET-ID.", 'action');
+        return;
+    }
+    if (targets.some(t => t.name === targetName)) {
+        generateLogEntry(`WARNING: Target ${targetName} is already active.`, 'action');
+        return;
+    }
+
+    const device = getRandomItem(deviceDatabase);
+    const location = generateRandomLocation();
+    const newTarget = {
+        name: targetName,
+        deviceID: device.id,
+        device: device.model,
+        os: device.os,
+        location: location,
+        ip: generateRandomIP(),
+        carrier: getRandomItem(carriers),
+        protocol: generateRandomProtocol(),
+        session: 'ACTIVE'
+    };
+    targets.push(newTarget);
+    createTargetCard(newTarget);
+    generateLogEntry(`[${systemEvents[1]}] ${targetName} acquired. Initializing data stream from source: ${newTarget.carrier}.`, 'success');
+    input.value = ''; 
+}
+
+function createTargetCard(target) { 
+    const cardId = `card-${target.name.replace(/\s+/g, '-')}`; 
+    const card = document.createElement('div'); 
+    card.className = 'card'; 
+    card.id = cardId; 
+    card.innerHTML = `
+        <h3>TARGET: ${target.name}</h3>
+        <p><strong>Device:</strong> ${target.device} (${target.os})</p>
+        <p><strong>Dev ID:</strong> ${target.deviceID}</p>
+        <p><strong>Carrier:</strong> ${target.carrier}</p>
+        <p><strong>Protocol:</strong> <span class="data-protocol">${target.protocol}</span></p>
+        <p><strong>IP:</strong> <span class="data-ip">${target.ip}</span></p>
+        <p><strong>Data Stream:</strong> <span class="data-bytes">0.00</span> MB/s</p>
+        <p><strong>Geo-Loc:</strong> <span class="data-lat">${target.location.lat}</span>, <span class="data-lon">${target.location.lon}</span></p>
+    `; 
+    dataPanel.appendChild(card); 
+}
+
+// --- LÓGICA DE REQUISIÇÃO DE DADOS ---
+function requestData(source) { 
+    if (targets.length === 0) { 
+        generateLogEntry("ERROR: No active target for data request.", 'action'); 
+        return; 
+    } 
+    const target = getRandomItem(targets); 
+    generateLogEntry(`[${systemEvents[2]}] Initiating data extraction from [${source}] for TARGET ${target.name}...`, 'info'); 
+    setTimeout(() => {
+        generateLogEntry(`[${systemEvents[3]}] Data stream established for ${target.name}.`, 'success');
+    }, 2000);
+}
+
+// --- LÓGICA DE CRIPTANÁLISE BULLRUN ---
+function runComplexOperation() {
+    if (targets.length === 0) {
+        generateLogEntry("ERROR: No active target for complex operation.", 'action', bullrunLog);
+        return;
+    }
+    const target = getRandomItem(targets);
+    simulateBullrunAttack(target);
+}
+
+function simulateBullrunAttack(target) {
+    let keyVaultSource = "OEM_TRUSTZONE_KEY_EXTRACTION";
+    if (target.device.manufacturer === 'Apple') {
+        keyVaultSource = "APPLE_ICLOUD_KEY_VAULT";
+    } else if (target.device.manufacturer === 'Samsung') {
+        keyVaultSource = "SAMSUNG_KNOX_VAULT";
+    } else if (target.device.manufacturer === 'Google') {
+        keyVaultSource = "GOOGLE_TITAN_CHIP_EXPLOIT";
+    }
+
+    const steps = [
+        { msg: `[TASK-001] Initiating MITM attack on TARGET ${target.name} via ${target.carrier}...`, type: 'action', delay: 0 },
+        { msg: `[TASK-002] Pinging ${target.ip}. Establishing secure channel...`, type: 'info', delay: 1500 },
+        { msg: `[TASK-003] Requesting session keys from partner source (${keyVaultSource})...`, type: 'info', delay: 3000 },
+        { msg: `[TASK-004] Key request authenticated. Receiving decryption keys...`, type: 'info', delay: 5000 },
+        { msg: `[TASK-005] ${target.protocol} encryption layer bypassed. Live data stream established.`, type: 'success', delay: 7000 }
+    ];
+    
+    bullrunLog.innerHTML = '';
+    steps.forEach(step => setTimeout(() => generateLogEntry(step.msg, step.type, bullrunLog), step.delay));
+    openTab('bullrun');
+}
+
+// --- LÓGICA DE PESQUISA XKEYSCORE ---
+function runXkeyscoreSearch() {
+    const query = document.getElementById('xkeyscoreInput').value;
+    xkeyscoreResults.innerHTML = '';
+    generateLogEntry(`[QUERY-ENGINE] Running advanced global data query for "${query}"...`, 'info', xkeyscoreResults);
+    
+    setTimeout(() => {
+        const emailCount = Math.floor(Math.random() * 5000) + 100;
+        const chatCount = Math.floor(Math.random() * 1500) + 50;
+        const docCount = Math.floor(Math.random() * 300) + 20;
+
+        generateLogEntry(`[DB-RESULTS] Found ${emailCount} emails, ${chatCount} chat logs, ${docCount} documents.`, 'info', xkeyscoreResults);
+        generateLogEntry(`[ITEM-FLAGGED] [EMAIL] to: classified@gov | from: target@proton.me | subject: "Re: The Plan" - flagged for sensitive content.`, 'action', xkeyscoreResults);
+        generateLogEntry(`[QUERY-COMPLETE] XKEYSCORE query finished.`, 'success', xkeyscoreResults);
+    }, 2500);
+}
+
+// --- INICIALIZAÇÃO DO SISTEMA E LOOPS AUTOMATIZADOS ---
+document.addEventListener('DOMContentLoaded', () => { 
+    generateLogEntry("PRISM v5.1 System Online. Awaiting target acquisition...", 'success'); 
+    
+    // Geração de log de fundo automatizada
+    setInterval(() => {
+        if (Math.random() > 0.7) { // 30% de chance de logar
+            const eventType = getRandomItem(systemEvents);
+            generateLogEntry(`[SYSTEM] Background process: ${eventType}.`, 'info');
+        }
+    }, 5000);
+});
+
+// Atualizações de dados de alvo automatizadas
+setInterval(() => { 
+    targets.forEach(target => { 
+        // Atualiza a localização com uma pequena variação
+        target.location.lat = (parseFloat(target.location.lat) + (Math.random() - 0.5) * 0.001).toFixed(5); 
+        target.location.lon = (parseFloat(target.location.lon) + (Math.random() - 0.5) * 0.001).toFixed(5); 
+        
+        // Atualiza o fluxo de dados
+        target.ip = generateRandomIP();
+        target.protocol = generateRandomProtocol();
+        
+        const cardEl = document.getElementById(`card-${target.name.replace(/\s+/g, '-')}`); 
+        if (cardEl) { 
+            cardEl.querySelector('.data-lat').textContent = target.location.lat; 
+            cardEl.querySelector('.data-lon').textContent = target.location.lon; 
+            cardEl.querySelector('.data-bytes').textContent = generateRandomBytes();
+            cardEl.querySelector('.data-ip').textContent = target.ip;
+            cardEl.querySelector('.data-protocol').textContent = target.protocol;
+        }
+    }); 
+}, 3000);
+
+// --- LÓGICA DO TERMINAL ---
+const terminalCommands = [
+    '<span class="prompt">NSA:</span> Attempting to connect to NSA_DATA_GRID_1...<br>',
+    '<span class="prompt">NSA:</span> Authenticating with secure credentials...<br>',
+    '<span class="prompt">user@nsa-gate:~$</span> <span class="command">ssh -p 2200 sysadmin@nsa-internal-net</span><br>',
+    '<span class="info">2FA Required. Using SecureKey: [OK]</span><br>',
+    '<span class="info">Starting NSA/Quantum-VPN handshake...</span><br>',
+    'Connected to NSA-SEC-VPN-10. Establishing encrypted tunnel.<br>',
+    '<span class="prompt">NSA:</span> Connection established. Welcome to the NSA Command Shell.<br>',
+    '<span class="prompt">Type "help" for a list of available commands.</span><br>',
+    '<span class="prompt">user@nsa-gate ~ $</span> <span class="command">ls -la</span><br>',
+    '<span class="info">drwxr-xr-x 4 root root 4096 Aug 24 16:58 ./<br>drwxr-xr-x 3 root root 4096 Aug 24 16:58 ../<br>drwxr-xr-x 2 root root 4096 Aug 24 16:58 bin/<br>-rw-r--r-- 1 root root 1024 Aug 24 16:58 active_targets.db</span><br>',
+    '<span class="prompt">user@nsa-gate ~ $</span> <span class="command">tail -f /var/log/prism-ingestion.log</span><br>'
+];
+
+function runTerminalSimulation() {
+    if (terminalLoop) clearInterval(terminalLoop);
+    terminalOutput.innerHTML = '';
+    let i = 0;
+    const initialTyping = setInterval(() => {
+        if (i < terminalCommands.length) {
+            terminalOutput.innerHTML += terminalCommands[i];
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            i++;
+        } else {
+            clearInterval(initialTyping);
+            // Inicia os comandos em loop
+            terminalLoop = setInterval(() => {
+                const randomLog = `[SYSTEM] ${getRandomItem(systemEvents)} triggered for session ${Math.floor(Math.random() * 9000) + 1000}`;
+                terminalOutput.innerHTML += `<span class="prompt">user@nsa-gate ~ $</span> <span class="info">${randomLog}</span><br>`;
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            }, 1500);
+        }
+    }, 200); // Velocidade da "digitação"
+}
+
+// Funções de controle da janela
+function closeTerminal() {
+    terminalWindow.style.display = 'none';
+    if (terminalLoop) clearInterval(terminalLoop);
+    terminalWindow.classList.remove('minimized', 'maximized');
+    terminalWindow.style.width = '80%';
+    terminalWindow.style.height = '60vh';
+}
+
+function minimizeTerminal() {
+    terminalWindow.classList.toggle('minimized');
+    terminalWindow.classList.remove('maximized');
+}
+
+function maximizeTerminal() {
+    terminalWindow.classList.toggle('maximized');
+    terminalWindow.classList.remove('minimized');
+}
+
+// Função para abrir o terminal
+function openTerminal() {
+    terminalWindow.style.display = 'flex';
+    runTerminalSimulation();
+}
+
+// --- LÓGICA DE ARRASTAR E REDIMENSIONAR A JANELA ---
+
+// Lógica para arrastar
+terminalHeader.addEventListener('mousedown', dragStart);
+function dragStart(e) {
+    if (e.target.tagName.toLowerCase() === 'button' || terminalWindow.classList.contains('maximized')) {
+        return; // Não arraste se for um botão ou se a janela estiver maximizada
+    }
+    e.preventDefault();
+    isDragging = true;
+    initialX = e.clientX - xOffset;
+    initialY = e.clientY - yOffset;
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', dragEnd);
+    terminalHeader.style.cursor = 'grabbing';
+}
+
+function drag(e) {
+    if (isDragging) {
+        e.preventDefault();
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+
+        xOffset = currentX;
+        yOffset = currentY;
+
+        setTranslate(currentX, currentY, terminalWindow);
+    }
+}
+
+function dragEnd(e) {
+    isDragging = false;
+    document.removeEventListener('mousemove', drag);
+    document.removeEventListener('mouseup', dragEnd);
+    terminalHeader.style.cursor = 'grab';
+}
+
+function setTranslate(xPos, yPos, el) {
+    el.style.transform = `translate(${xPos}px, ${yPos}px)`;
+}
+
+// Lógica para redimensionar
+terminalResizeHandle.addEventListener('mousedown', resizeStart);
+function resizeStart(e) {
+    if (terminalWindow.classList.contains('maximized')) {
+        return;
+    }
+    e.preventDefault();
+    isResizing = true;
+    initialX = e.clientX;
+    initialY = e.clientY;
+    initialWidth = terminalWindow.offsetWidth;
+    initialHeight = terminalWindow.offsetHeight;
+    
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('mouseup', resizeEnd);
+}
+
+function resize(e) {
+    if (isResizing) {
+        const newWidth = initialWidth + (e.clientX - initialX);
+        const newHeight = initialHeight + (e.clientY - initialY);
+
+        terminalWindow.style.width = `${newWidth}px`;
+        terminalWindow.style.height = `${newHeight}px`;
+    }
+}
+
+function resizeEnd(e) {
+    isResizing = false;
+    document.removeEventListener('mousemove', resize);
+    document.removeEventListener('mouseup', resizeEnd);
+}
+
+</script>
+</body>
+</html>
